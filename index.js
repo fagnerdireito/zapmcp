@@ -1,14 +1,27 @@
-const { Server } = require("@modelcontextprotocol/sdk/server/index.js");
-const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
-// Importação corrigida para o HttpServerTransport
-const HttpServerTransport = require("@modelcontextprotocol/sdk").HttpServerTransport;
-const { CallToolRequestSchema, ListToolsRequestSchema } = require("@modelcontextprotocol/sdk/types.js");
+// Importações corretas para o SDK MCP
+const mcp = require("@modelcontextprotocol/sdk");
 const { z } = require("zod");
 const axios = require("axios");
 const dotenv = require("dotenv");
-const http = require("http");
+const express = require("express");
+const bodyParser = require("body-parser");
 
 dotenv.config();
+
+// Configuração do servidor Express
+const app = express();
+app.use(bodyParser.json());
+
+// Permitir CORS para desenvolvimento
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // Esquemas de validação com Zod
 const schemas = {
@@ -214,94 +227,76 @@ const toolHandlers = {
   },
 };
 
-// Instância do servidor MCP
-const server = new Server(
-  { name: "evolution-tools-server", version: "1.0.0" },
-  { capabilities: { tools: {} } }
-);
-
-// Handlers das requisições MPC
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  console.error("Ferramenta requisitada pelo cliente");
-  return { tools: TOOL_DEFINITIONS };
-});
-
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-
+// Rotas MCP para o n8n
+app.post('/mcp', async (req, res) => {
   try {
-    const handler = toolHandlers[name];
-    if (!handler) throw new Error(`Tool Desconhecida: ${name}`);
-    return await handler(args);
+    console.log('Recebida requisição MCP:', JSON.stringify(req.body, null, 2));
+    
+    // Verificar tipo de requisição
+    const requestType = req.body.method;
+    
+    // Manipular ListTools
+    if (requestType === 'tools.list') {
+      return res.json({
+        id: req.body.id,
+        jsonrpc: '2.0',
+        result: { tools: TOOL_DEFINITIONS }
+      });
+    }
+    
+    // Manipular CallTool
+    if (requestType === 'tools.call') {
+      const { name, arguments: args } = req.body.params;
+      
+      const handler = toolHandlers[name.replace(/[-_]/g, '_')];
+      if (!handler) {
+        return res.status(404).json({
+          id: req.body.id,
+          jsonrpc: '2.0',
+          error: { code: -32601, message: `Tool Desconhecida: ${name}` }
+        });
+      }
+      
+      const result = await handler(args);
+      return res.json({
+        id: req.body.id,
+        jsonrpc: '2.0',
+        result
+      });
+    }
+    
+    // Requisição desconhecida
+    return res.status(400).json({
+      id: req.body.id,
+      jsonrpc: '2.0',
+      error: { code: -32601, message: 'Método não suportado' }
+    });
+    
   } catch (error) {
-    console.error(`Erro executando a tool ${name}:`, error);
-    throw error;
+    console.error('Erro ao processar requisição MCP:', error);
+    return res.status(500).json({
+      id: req.body?.id || null,
+      jsonrpc: '2.0',
+      error: { code: -32603, message: error.message }
+    });
   }
 });
 
-// Execução principal
-async function main() {
-  // Verifica se deve rodar em modo HTTP ou STDIO
-  const useHttp = process.env.USE_HTTP === 'true';
-  
-  if (useHttp) {
-    try {
-      console.log("Iniciando servidor HTTP...");
-      // Configuração do servidor HTTP
-      const port = process.env.PORT || 3000;
-      
-      // Criando transporte HTTP utilizando a versão correta da importação
-      const httpTransport = new HttpServerTransport({ 
-        port: parseInt(port), 
-        path: '/mcp',
-        allowOrigin: '*' // Para desenvolvimento, em produção defina origens específicas
-      });
-      
-      await server.connect(httpTransport);
-      console.log(`Evolution API MCP Server rodando em HTTP na porta ${port}/mcp`);
-    } catch (error) {
-      console.error("Erro ao iniciar servidor HTTP:", error);
-      // Fallback para STDIO se HTTP falhar
-      const transport = new StdioServerTransport();
-      await server.connect(transport);
-      console.log("Fallback: Evolution API MCP Server rodando no stdio");
-    }
-  } else {
-    // Modo STDIO (para testes locais)
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.log("Evolution API MCP Server rodando no stdio");
-  }
-}
+// Rota de teste/saúde
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
-// Execução direta por argumentos CLI
-const args = process.argv.slice(2);
-if (args.length > 0) {
-  const funcao = args[0];
-  const input = args[1] ? JSON.parse(args[1]) : {};
+// Rota para listar ferramentas (para teste fácil no navegador)
+app.get('/tools', (req, res) => {
+  res.json({ tools: TOOL_DEFINITIONS });
+});
 
-  console.log("🔐 Variáveis de ambiente utilizadas:");
-//   console.log("EVOLUTION_INSTANCIA:", process.env.EVOLUTION_INSTANCIA);
-//   console.log("EVOLUTION_APIKEY:", process.env.EVOLUTION_APIKEY);
-//   console.log("EVOLUTION_API_BASE:", process.env.EVOLUTION_API_BASE);
-
-  if (toolHandlers[funcao]) {
-    toolHandlers[funcao](input)
-      .then((res) => {
-        console.log(JSON.stringify(res, null, 2));
-        process.exit(0);
-      })
-      .catch((err) => {
-        console.error(`Erro ao executar ${funcao}:`, err);
-        process.exit(1);
-      });
-  } else {
-    console.error(`❌ Função desconhecida: ${funcao}`);
-    process.exit(1);
-  }
-} else {
-  main().catch((error) => {
-    console.error("Erro Fatal:", error);
-    process.exit(1);
-  });
-}
+// Iniciar servidor
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Servidor MCP alternativo rodando na porta ${port}`);
+  console.log(`Endpoint principal: http://localhost:${port}/mcp`);
+  console.log(`Rota de teste: http://localhost:${port}/health`);
+  console.log(`Lista de ferramentas: http://localhost:${port}/tools`);
+});

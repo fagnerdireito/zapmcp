@@ -1,7 +1,7 @@
 {
   "name": "mcp",
   "version": "1.0.0",
-  "description": "MCP Server for Evolution API integration",
+  "description": "Servidor MCP para integração com Evolution API",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -12,7 +12,9 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
     "axios": "^1.8.4",
+    "body-parser": "^1.20.2",
     "dotenv": "^16.4.7",
+    "express": "^4.18.3",
     "zod": "^3.24.2"
   }
 }
