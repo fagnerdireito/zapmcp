@@ -1,5 +1,6 @@
-// Importações corretas para o SDK MCP
-const mcp = require("@modelcontextprotocol/sdk");
+const { Server } = require("@modelcontextprotocol/sdk/server/index.js");
+const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
+const { CallToolRequestSchema, ListToolsRequestSchema } = require("@modelcontextprotocol/sdk/types.js");
 const { z } = require("zod");
 const axios = require("axios");
 const dotenv = require("dotenv");
@@ -8,7 +9,7 @@ const bodyParser = require("body-parser");
 
 dotenv.config();
 
-// Configuração do servidor Express
+// Configuração do servidor Express (adicionando para compatibilidade HTTP)
 const app = express();
 app.use(bodyParser.json());
 
@@ -227,6 +228,31 @@ const toolHandlers = {
   },
 };
 
+// Instância do servidor MPC
+const server = new Server(
+  { name: "evolution-tools-server", version: "1.0.0" },
+  { capabilities: { tools: {} } }
+);
+
+// Handlers das requisições MPC
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  console.error("Ferramenta requisitada pelo cliente");
+  return { tools: TOOL_DEFINITIONS };
+});
+
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  try {
+    const handler = toolHandlers[name];
+    if (!handler) throw new Error(`Tool Desconhecida: ${name}`);
+    return await handler(args);
+  } catch (error) {
+    console.error(`Erro executando a tool ${name}:`, error);
+    throw error;
+  }
+});
+
 // Rotas MCP para o n8n
 app.post('/mcp', async (req, res) => {
   try {
@@ -292,11 +318,55 @@ app.get('/tools', (req, res) => {
   res.json({ tools: TOOL_DEFINITIONS });
 });
 
-// Iniciar servidor
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Servidor MCP alternativo rodando na porta ${port}`);
-  console.log(`Endpoint principal: http://localhost:${port}/mcp`);
-  console.log(`Rota de teste: http://localhost:${port}/health`);
-  console.log(`Lista de ferramentas: http://localhost:${port}/tools`);
-});
+// Execução principal
+async function main() {
+  const useHttp = process.env.USE_HTTP === 'true';
+  
+  if (useHttp) {
+    // Iniciar servidor HTTP Express
+    const port = process.env.PORT || 3000;
+    app.listen(port, () => {
+      console.log(`Servidor MCP HTTP rodando na porta ${port}`);
+      console.log(`Endpoint principal: http://localhost:${port}/mcp`);
+      console.log(`Rota de teste: http://localhost:${port}/health`);
+      console.log(`Lista de ferramentas: http://localhost:${port}/tools`);
+    });
+  } else {
+    // Iniciar servidor STDIO (modo original)
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.log("Evolution API MPC Server rodando no stdio");
+  }
+}
+
+// Execução direta por argumentos CLI
+const args = process.argv.slice(2);
+if (args.length > 0) {
+  const funcao = args[0];
+  const input = args[1] ? JSON.parse(args[1]) : {};
+
+  console.log("🔐 Variáveis de ambiente utilizadas:");
+//   console.log("EVOLUTION_INSTANCIA:", process.env.EVOLUTION_INSTANCIA);
+//   console.log("EVOLUTION_APIKEY:", process.env.EVOLUTION_APIKEY);
+//   console.log("EVOLUTION_API_BASE:", process.env.EVOLUTION_API_BASE);
+
+  if (toolHandlers[funcao]) {
+    toolHandlers[funcao](input)
+      .then((res) => {
+        console.log(JSON.stringify(res, null, 2));
+        process.exit(0);
+      })
+      .catch((err) => {
+        console.error(`Erro ao executar ${funcao}:`, err);
+        process.exit(1);
+      });
+  } else {
+    console.error(`❌ Função desconhecida: ${funcao}`);
+    process.exit(1);
+  }
+} else {
+  main().catch((error) => {
+    console.error("Erro Fatal:", error);
+    process.exit(1);
+  });
+}
