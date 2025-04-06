@@ -1,6 +1,7 @@
 const { Server } = require("@modelcontextprotocol/sdk/server/index.js");
 const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
-const { HttpServerTransport } = require("@modelcontextprotocol/sdk/server/http.js");
+// Importação corrigida para o HttpServerTransport
+const HttpServerTransport = require("@modelcontextprotocol/sdk").HttpServerTransport;
 const { CallToolRequestSchema, ListToolsRequestSchema } = require("@modelcontextprotocol/sdk/types.js");
 const { z } = require("zod");
 const axios = require("axios");
@@ -244,21 +245,32 @@ async function main() {
   const useHttp = process.env.USE_HTTP === 'true';
   
   if (useHttp) {
-    // Configuração do servidor HTTP
-    const port = process.env.PORT || 3000;
-    const httpTransport = new HttpServerTransport({ 
-      port, 
-      path: '/mcp',
-      allowOrigin: '*' // Para desenvolvimento, em produção defina origens específicas
-    });
-    
-    await server.connect(httpTransport);
-    console.error(`Evolution API MCP Server rodando em HTTP na porta ${port}/mcp`);
+    try {
+      console.log("Iniciando servidor HTTP...");
+      // Configuração do servidor HTTP
+      const port = process.env.PORT || 3000;
+      
+      // Criando transporte HTTP utilizando a versão correta da importação
+      const httpTransport = new HttpServerTransport({ 
+        port: parseInt(port), 
+        path: '/mcp',
+        allowOrigin: '*' // Para desenvolvimento, em produção defina origens específicas
+      });
+      
+      await server.connect(httpTransport);
+      console.log(`Evolution API MCP Server rodando em HTTP na porta ${port}/mcp`);
+    } catch (error) {
+      console.error("Erro ao iniciar servidor HTTP:", error);
+      // Fallback para STDIO se HTTP falhar
+      const transport = new StdioServerTransport();
+      await server.connect(transport);
+      console.log("Fallback: Evolution API MCP Server rodando no stdio");
+    }
   } else {
     // Modo STDIO (para testes locais)
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("Evolution API MPC Server rodando no stdio");
+    console.log("Evolution API MCP Server rodando no stdio");
   }
 }
 
