@@ -250,9 +250,9 @@ if (args.length > 0) {
   const input = args[1] ? JSON.parse(args[1]) : {};
 
   console.log("🔐 Variáveis de ambiente utilizadas:");
-  console.log("EVOLUTION_INSTANCIA:", process.env.EVOLUTION_INSTANCIA);
-  console.log("EVOLUTION_APIKEY:", process.env.EVOLUTION_APIKEY);
-  console.log("EVOLUTION_API_BASE:", process.env.EVOLUTION_API_BASE);
+//   console.log("EVOLUTION_INSTANCIA:", process.env.EVOLUTION_INSTANCIA);
+//   console.log("EVOLUTION_APIKEY:", process.env.EVOLUTION_APIKEY);
+//   console.log("EVOLUTION_API_BASE:", process.env.EVOLUTION_API_BASE);
 
   if (toolHandlers[funcao]) {
     toolHandlers[funcao](input)
