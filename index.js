@@ -1,9 +1,11 @@
 const { Server } = require("@modelcontextprotocol/sdk/server/index.js");
 const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
+const { HttpServerTransport } = require("@modelcontextprotocol/sdk/server/http.js");
 const { CallToolRequestSchema, ListToolsRequestSchema } = require("@modelcontextprotocol/sdk/types.js");
 const { z } = require("zod");
 const axios = require("axios");
 const dotenv = require("dotenv");
+const http = require("http");
 
 dotenv.config();
 
@@ -211,7 +213,7 @@ const toolHandlers = {
   },
 };
 
-// Instância do servidor MPC
+// Instância do servidor MCP
 const server = new Server(
   { name: "evolution-tools-server", version: "1.0.0" },
   { capabilities: { tools: {} } }
@@ -219,7 +221,7 @@ const server = new Server(
 
 // Handlers das requisições MPC
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  console.error("Ferramenta requesitada pelo cliente");
+  console.error("Ferramenta requisitada pelo cliente");
   return { tools: TOOL_DEFINITIONS };
 });
 
@@ -238,9 +240,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Execução principal
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Evolution API MPC Server rodando no stdio");
+  // Verifica se deve rodar em modo HTTP ou STDIO
+  const useHttp = process.env.USE_HTTP === 'true';
+  
+  if (useHttp) {
+    // Configuração do servidor HTTP
+    const port = process.env.PORT || 3000;
+    const httpTransport = new HttpServerTransport({ 
+      port, 
+      path: '/mcp',
+      allowOrigin: '*' // Para desenvolvimento, em produção defina origens específicas
+    });
+    
+    await server.connect(httpTransport);
+    console.error(`Evolution API MCP Server rodando em HTTP na porta ${port}/mcp`);
+  } else {
+    // Modo STDIO (para testes locais)
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error("Evolution API MPC Server rodando no stdio");
+  }
 }
 
 // Execução direta por argumentos CLI

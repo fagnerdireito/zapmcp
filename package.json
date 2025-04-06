@@ -1,18 +1,18 @@
 {
-    "name": "mcp",
-    "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
-    "scripts": {
-      "test": "echo \"Error: no test specified\" && exit 1",
-      "start": "node index.js"
-    },
-    "author": "",
-    "license": "ISC",
-    "dependencies": {
-      "@modelcontextprotocol/sdk": "^1.8.0",
-      "axios": "^1.8.4",
-      "dotenv": "^16.4.7",
-      "zod": "^3.24.2"
-    }
+  "name": "mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for Evolution API integration",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.8.0",
+    "axios": "^1.8.4",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
   }
+}
