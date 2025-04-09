@@ -4,25 +4,8 @@ const { CallToolRequestSchema, ListToolsRequestSchema } = require("@modelcontext
 const { z } = require("zod");
 const axios = require("axios");
 const dotenv = require("dotenv");
-const express = require("express");
-const bodyParser = require("body-parser");
 
 dotenv.config();
-
-// Configuração do servidor Express (adicionando para compatibilidade HTTP)
-const app = express();
-app.use(bodyParser.json());
-
-// Permitir CORS para desenvolvimento
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-  next();
-});
 
 // Esquemas de validação com Zod
 const schemas = {
@@ -236,7 +219,7 @@ const server = new Server(
 
 // Handlers das requisições MPC
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  console.error("Ferramenta requisitada pelo cliente");
+  console.error("Ferramenta requesitada pelo cliente");
   return { tools: TOOL_DEFINITIONS };
 });
 
@@ -253,90 +236,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-// Rotas MCP para o n8n
-app.post('/mcp', async (req, res) => {
-  try {
-    console.log('Recebida requisição MCP:', JSON.stringify(req.body, null, 2));
-    
-    // Verificar tipo de requisição
-    const requestType = req.body.method;
-    
-    // Manipular ListTools
-    if (requestType === 'tools.list') {
-      return res.json({
-        id: req.body.id,
-        jsonrpc: '2.0',
-        result: { tools: TOOL_DEFINITIONS }
-      });
-    }
-    
-    // Manipular CallTool
-    if (requestType === 'tools.call') {
-      const { name, arguments: args } = req.body.params;
-      
-      const handler = toolHandlers[name.replace(/[-_]/g, '_')];
-      if (!handler) {
-        return res.status(404).json({
-          id: req.body.id,
-          jsonrpc: '2.0',
-          error: { code: -32601, message: `Tool Desconhecida: ${name}` }
-        });
-      }
-      
-      const result = await handler(args);
-      return res.json({
-        id: req.body.id,
-        jsonrpc: '2.0',
-        result
-      });
-    }
-    
-    // Requisição desconhecida
-    return res.status(400).json({
-      id: req.body.id,
-      jsonrpc: '2.0',
-      error: { code: -32601, message: 'Método não suportado' }
-    });
-    
-  } catch (error) {
-    console.error('Erro ao processar requisição MCP:', error);
-    return res.status(500).json({
-      id: req.body?.id || null,
-      jsonrpc: '2.0',
-      error: { code: -32603, message: error.message }
-    });
-  }
-});
-
-// Rota de teste/saúde
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Rota para listar ferramentas (para teste fácil no navegador)
-app.get('/tools', (req, res) => {
-  res.json({ tools: TOOL_DEFINITIONS });
-});
-
 // Execução principal
 async function main() {
-  const useHttp = process.env.USE_HTTP === 'true';
-  
-  if (useHttp) {
-    // Iniciar servidor HTTP Express
-    const port = process.env.PORT || 3000;
-    app.listen(port, () => {
-      console.log(`Servidor MCP HTTP rodando na porta ${port}`);
-      console.log(`Endpoint principal: http://localhost:${port}/mcp`);
-      console.log(`Rota de teste: http://localhost:${port}/health`);
-      console.log(`Lista de ferramentas: http://localhost:${port}/tools`);
-    });
-  } else {
-    // Iniciar servidor STDIO (modo original)
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.log("Evolution API MPC Server rodando no stdio");
-  }
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error("Evolution API MPC Server rodando no stdio");
 }
 
 // Execução direta por argumentos CLI
@@ -346,9 +250,9 @@ if (args.length > 0) {
   const input = args[1] ? JSON.parse(args[1]) : {};
 
   console.log("🔐 Variáveis de ambiente utilizadas:");
-//   console.log("EVOLUTION_INSTANCIA:", process.env.EVOLUTION_INSTANCIA);
-//   console.log("EVOLUTION_APIKEY:", process.env.EVOLUTION_APIKEY);
-//   console.log("EVOLUTION_API_BASE:", process.env.EVOLUTION_API_BASE);
+  console.log("EVOLUTION_INSTANCIA:", process.env.EVOLUTION_INSTANCIA);
+  console.log("EVOLUTION_APIKEY:", process.env.EVOLUTION_APIKEY);
+  console.log("EVOLUTION_API_BASE:", process.env.EVOLUTION_API_BASE);
 
   if (toolHandlers[funcao]) {
     toolHandlers[funcao](input)
