@@ -254,7 +254,7 @@ async function main() {
   
   // Criar e configurar o transporte HTTP com SSE
   const transport = new HttpSseServerTransport({
-    path: "/mpc", // Caminho base para o endpoint MPC
+    path: "/mcp", // Caminho base para o endpoint MCP
   });
   
   // Conectar o servidor MPC ao transporte HTTP
@@ -265,8 +265,8 @@ async function main() {
   
   // Iniciar o servidor HTTP
   app.listen(port, () => {
-    console.log(`Servidor MPC HTTP/SSE rodando na porta ${port}`);
-    console.log(`Endpoint MPC disponível em: http://localhost:${port}/mpc`);
+    console.log(`Servidor MCP HTTP/SSE rodando na porta ${port}`);
+    console.log(`Endpoint MCP disponível em: http://localhost:${port}/mcp`);
   });
 }
 
