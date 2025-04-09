@@ -3,36 +3,18 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "postinstall": "patch-package",
-    "dev": "tsc && node dist/index.js"
+    "start": "node index.js"
   },
-  "keywords": [
-    "mcp",
-    "evolution",
-    "tools",
-    "server"
-  ],
-  "author": "Fagner Santos",
+  "author": "",
   "license": "ISC",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.9.0",
+    "@modelcontextprotocol/sdk": "^1.8.0",
     "axios": "^1.8.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
-    "patch-package": "^8.0.0",
-    "pkce-challenge": "^2.1.0",
     "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.1",
-    "@types/node": "^22.14.0",
-    "typescript": "^5.8.3"
   }
 }
