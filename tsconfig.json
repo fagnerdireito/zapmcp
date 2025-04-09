@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "ES2022",  // Altere para ES2022 ou ESNext
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "outDir": "./dist"
+  },
+  "include": ["*.ts"],
+  "exclude": ["node_modules"]
+}
